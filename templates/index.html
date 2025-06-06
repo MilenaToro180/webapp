@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de San Cristóbal</title>
+
+    <!-- CSS de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100vw; }
+        /* Estilo para que el popup del formulario se vea bien */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+        .leaflet-popup-content {
+            margin: 15px;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <!-- JS de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- CONFIGURACIÓN DEL MAPA ---
+        const sanCristobalCoords = [4.569, -74.095];
+        const initialZoom = 14;
+
+        const map = L.map('map').setView(sanCristobalCoords, initialZoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        let currentMarker = null;
+
+        // --- FUNCIONALIDAD PRINCIPAL ---
+        map.on('click', async function(e) {
+            // Si ya existe un marcador, lo borramos
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
+
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            try {
+                // ¡AQUÍ ESTÁ LA MAGIA!
+                // Hacemos una petición a nuestra app Flask para que nos dé el HTML del formulario.
+                const response = await fetch('/formulario');
+                if (!response.ok) throw new Error('Error al cargar el formulario.');
+                
+                const formHTML = await response.text();
+
+                // Creamos el marcador, le asignamos el formulario y lo abrimos
+                currentMarker = L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(formHTML, { minWidth: 250 }) // Damos un ancho mínimo al popup
+                    .openPopup();
+                
+                // Una vez que el popup se abre, rellenamos las coordenadas en el formulario
+                currentMarker.on('popupopen', () => {
+                    // Buscamos los campos ocultos en el formulario y les ponemos el valor
+                    const latInput = document.getElementById('latitud');
+                    const lngInput = document.getElementById('longitud');
+                    if(latInput) latInput.value = lat.toFixed(6);
+                    if(lngInput) lngInput.value = lng.toFixed(6);
+                });
+
+            } catch (error) {
+                console.error("Error:", error);
+                alert("No se pudo cargar el formulario de reporte.");
+            }
+        });
+    </script>
+</body>
+</html>
