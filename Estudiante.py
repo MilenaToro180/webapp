@@ -21,3 +21,4 @@ class Estudiante(db.Model):
         self.nombre=nombre
         self.email=email
         self.codigo=codigo
+    
